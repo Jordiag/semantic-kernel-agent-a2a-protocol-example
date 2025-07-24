@@ -10,6 +10,7 @@
     <PackageReference Include="a2a-net.Client" Version="0.10.0" />
     <PackageReference Include="a2a-net.Client.Http" Version="0.10.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.60.0" />
   </ItemGroup>
 

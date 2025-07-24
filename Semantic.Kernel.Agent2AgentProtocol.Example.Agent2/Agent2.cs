@@ -8,7 +8,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 {
     private readonly IMessagingTransport _transport = transport;
 
-    public async Task RunAsync()
+    public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         Console.WriteLine("[Agent‑2] waiting for task...");
 
@@ -46,7 +46,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 
             var responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             await _transport.SendMessageAsync(responseJson);
-        });
+        }, cancellationToken);
 
         Console.ReadLine();
         await _transport.StopProcessingAsync();
