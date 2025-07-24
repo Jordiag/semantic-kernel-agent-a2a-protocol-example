@@ -79,9 +79,10 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
 
     public async Task SendMessageAsync(string json)
     {
-        if (_stream == null) return;
+        if (_stream is not { CanWrite: true })
+            throw new InvalidOperationException("Pipe not connected.");
 
-        var writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
+        await using var writer = new StreamWriter(_stream, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
         await writer.WriteLineAsync(json);
         _logger?.LogDebug("Sent JSON: {json}", json);
     }
