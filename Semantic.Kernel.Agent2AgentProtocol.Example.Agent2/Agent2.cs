@@ -14,7 +14,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 
         await _transport.StartProcessingAsync(async json =>
         {
-            (string text, string from, string to) = A2AHelper.ParseTaskRequest(json);
+            (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(json);
             if (text == null) return;  // not an A2A task message
             if (to != "Agent2")
             {

@@ -17,12 +17,12 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
     private Stream? _stream;
     private readonly ILogger<NamedPipeTransport>? _logger = logger;
     private Func<string, Task>? _handler;
-    private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     public async Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
         _handler = onMessageReceived;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (_isServer)
         {
@@ -33,7 +33,7 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
                 PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous);
 
-            await server.WaitForConnectionAsync(_cts.Token);
+            await server.WaitForConnectionAsync(_cancellationTokenSource.Token);
             _stream = server;
         }
         else
@@ -44,11 +44,11 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
 
-            await client.ConnectAsync(_cts.Token);
+            await client.ConnectAsync(_cancellationTokenSource.Token);
             _stream = client;
         }
 
-        _ = Task.Run(ReadLoopAsync, _cts.Token); // fire‑and‑forget
+        _ = Task.Run(ReadLoopAsync, _cancellationTokenSource.Token); // fire‑and‑forget
     }
 
     private async Task ReadLoopAsync()
@@ -56,7 +56,7 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
         if (_stream == null || _handler == null) return;
 
         var reader = new StreamReader(_stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
-        while (!_cts?.IsCancellationRequested ?? false)
+        while (!_cancellationTokenSource?.IsCancellationRequested ?? false)
         {
             string? line = await reader.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -65,14 +65,13 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
             {
                 // Validate that line is valid JSON so we don't forward garbage.
                 JsonDocument.Parse(line);
-                _logger?.LogDebug("Received JSON: {json}", line);
+                _logger?.LogDebug("Received JSON: {Json}", line);
                 await _handler(line);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
                 // Skip malformed payloads to avoid breaking the loop.
-                _logger?.LogWarning("Received malformed JSON");
-                continue;
+                _logger?.LogWarning(ex, "Received malformed JSON");
             }
         }
     }
@@ -84,14 +83,16 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
 
         await using var writer = new StreamWriter(_stream, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
         await writer.WriteLineAsync(json);
-        _logger?.LogDebug("Sent JSON: {json}", json);
+        _logger?.LogDebug("Sent JSON: {Json}", json);
     }
 
     public async Task StopProcessingAsync()
     {
-        _cts?.Cancel();
-        _stream?.Dispose();
-        _cts?.Dispose();
+        if (_cancellationTokenSource != null)
+            await _cancellationTokenSource.CancelAsync();
+        if(_stream != null)
+            await _stream.DisposeAsync();
+        _cancellationTokenSource?.Dispose();
         await Task.Yield();
     }
 }
