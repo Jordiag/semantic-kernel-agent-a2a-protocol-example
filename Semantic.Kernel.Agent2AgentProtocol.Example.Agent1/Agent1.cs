@@ -7,7 +7,7 @@ public class Agent1(IMessagingTransport transport)
 {
     private readonly IMessagingTransport _transport = transport;
 
-    public async Task RunAsync()
+    public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         Console.WriteLine("[Agent‑1] starting and listening...");
 
@@ -16,9 +16,9 @@ public class Agent1(IMessagingTransport transport)
         {
             Console.WriteLine($"[Agent‑1] ← {json}");
             await Task.CompletedTask;
-        });
+        }, cancellationToken);
 
-        await Task.Delay(2_000); // ensure Agent‑2 listener is ready
+        await Task.Delay(2_000, cancellationToken); // ensure Agent‑2 listener is ready
 
         Console.WriteLine("[Agent‑1] → sending REVERSE task...");
         var jsonRequest = A2AHelper.BuildTaskRequest("reverse: hello from Agent 1", "Agent1", "Agent2");

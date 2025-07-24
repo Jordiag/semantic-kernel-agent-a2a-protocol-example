@@ -1,5 +1,6 @@
 using Azure.Messaging.ServiceBus;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 
@@ -9,7 +10,7 @@ namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 /// The queue name is used symmetrically by *both* agents – the <paramref name="isReceiver"/> flag merely
 /// decides which side sets up the <see cref="ServiceBusProcessor"/>.
 /// </summary>
-public sealed class AzureServiceBusTransport(string connectionString, string queueName, bool isReceiver)
+public sealed class AzureServiceBusTransport(string connectionString, string queueName, bool isReceiver, ILogger<AzureServiceBusTransport>? logger = null)
     : IMessagingTransport
 {
     private readonly ServiceBusClient _client = new(connectionString);
@@ -19,11 +20,14 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
     private ServiceBusSender? _sender;
     private ServiceBusProcessor? _processor;
     private Func<string, Task>? _handler;
+    private readonly ILogger<AzureServiceBusTransport>? _logger = logger;
+    private CancellationTokenSource? _cts;
 
-    public async Task StartProcessingAsync(Func<string, Task> onMessageReceived)
+    public async Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
         _handler = onMessageReceived;
         _sender = _client.CreateSender(_queueName);
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (_isReceiver)
         {
@@ -39,11 +43,13 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                 try
                 {
                     JsonDocument.Parse(json);
+                    _logger?.LogDebug("Received JSON: {json}", json);
                     if (_handler != null) await _handler(json);
                 }
                 catch (JsonException)
                 {
                     // Ignore malformed payloads
+                    _logger?.LogWarning("Received malformed JSON");
                 }
 
                 await args.CompleteMessageAsync(args.Message);
@@ -55,20 +61,38 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                 return Task.CompletedTask;
             };
 
-            await _processor.StartProcessingAsync();
+            await _processor.StartProcessingAsync(_cts.Token);
         }
     }
 
     public async Task SendMessageAsync(string json)
     {
         _sender ??= _client.CreateSender(_queueName);
-        var message = new ServiceBusMessage(json);
+        var message = new ServiceBusMessage(json)
+        {
+            ContentType = "application/json"
+        };
+        try
+        {
+            var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("id", out var idProperty))
+            {
+                message.CorrelationId = idProperty.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            _logger?.LogWarning("Malformed JSON when sending");
+        }
         await _sender.SendMessageAsync(message);
+        _logger?.LogDebug("Sent JSON: {json}", json);
     }
 
     public async Task StopProcessingAsync()
     {
+        _cts?.Cancel();
         if (_processor != null) await _processor.StopProcessingAsync();
         await _client.DisposeAsync();
+        _cts?.Dispose();
     }
 }

@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 
@@ -9,18 +10,19 @@ namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 /// <see cref="NamedPipeClientStream"/>. The transport deals with **raw A2A JSON‑RPC messages** – every logical
 /// message is framed on its own line (\n‑delimited).
 /// </summary>
-public sealed class NamedPipeTransport(string pipeName, bool isServer) : IMessagingTransport
+public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<NamedPipeTransport>? logger = null) : IMessagingTransport
 {
     private readonly string _pipeName = pipeName;
     private readonly bool _isServer = isServer;
     private Stream? _stream;
+    private readonly ILogger<NamedPipeTransport>? _logger = logger;
     private Func<string, Task>? _handler;
     private CancellationTokenSource? _cts;
 
-    public async Task StartProcessingAsync(Func<string, Task> onMessageReceived)
+    public async Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
         _handler = onMessageReceived;
-        _cts = new CancellationTokenSource();
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (_isServer)
         {
@@ -63,11 +65,13 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer) : IMessag
             {
                 // Validate that line is valid JSON so we don't forward garbage.
                 JsonDocument.Parse(line);
+                _logger?.LogDebug("Received JSON: {json}", line);
                 await _handler(line);
             }
             catch (JsonException)
             {
                 // Skip malformed payloads to avoid breaking the loop.
+                _logger?.LogWarning("Received malformed JSON");
                 continue;
             }
         }
@@ -79,6 +83,7 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer) : IMessag
 
         var writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
         await writer.WriteLineAsync(json);
+        _logger?.LogDebug("Sent JSON: {json}", json);
     }
 
     public async Task StopProcessingAsync()

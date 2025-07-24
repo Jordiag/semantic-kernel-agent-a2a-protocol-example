@@ -11,7 +11,7 @@ namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging
         /// Starts listening for incoming A2A messages and invokes the supplied delegate for each
         /// fully received JSON payload.
         /// </summary>
-        Task StartProcessingAsync(Func<string, Task> onMessageReceived);
+    Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken);
 
         /// <summary>
         /// Sends the specified raw JSON payload through the underlying transport.
