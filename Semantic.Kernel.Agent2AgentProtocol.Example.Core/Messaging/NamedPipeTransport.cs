@@ -84,6 +84,8 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer) : IMessag
     public async Task StopProcessingAsync()
     {
         _cts?.Cancel();
+        _stream?.Dispose();
+        _cts?.Dispose();
         await Task.Yield();
     }
 }
