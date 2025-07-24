@@ -14,7 +14,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 
         await _transport.StartProcessingAsync(async json =>
         {
-            var (text, from, to) = A2AHelper.ParseTaskRequest(json);
+            (string text, string from, string to) = A2AHelper.ParseTaskRequest(json);
             if (text == null) return;  // not an A2A task message
             if (to != "Agent2")
             {
@@ -28,23 +28,21 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 
             if (text.StartsWith("reverse:", StringComparison.OrdinalIgnoreCase))
             {
-                var input = text["reverse:".Length..].Trim();
+                string input = text["reverse:".Length..].Trim();
 
-                var func = TextProcessingFunction.GetFunctionByType("reverse");
+                Microsoft.SemanticKernel.KernelFunction func = TextProcessingFunction.GetFunctionByType("reverse");
                 result = (await kernel.InvokeAsync(func, new() { ["input"] = input })).ToString();
-            }
-            else if (text.StartsWith("upper:", StringComparison.OrdinalIgnoreCase))
-            {
-                result = text["upper:".Length..].Trim().ToUpperInvariant();
             }
             else
             {
-                result = $"[unhandled] {text}";
+                result = text.StartsWith("upper:", StringComparison.OrdinalIgnoreCase)
+                    ? text["upper:".Length..].Trim().ToUpperInvariant()
+                    : $"[unhandled] {text}";
             }
 
             Console.WriteLine($"[Agent‑2] → responding with '{result}'");
 
-            var responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
+            string responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);
 

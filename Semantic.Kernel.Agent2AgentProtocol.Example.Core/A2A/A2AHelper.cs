@@ -20,7 +20,7 @@ public static class A2AHelper
     /// </summary>
     public static string BuildTaskRequest(string text, string from, string to)
     {
-        var id = Guid.NewGuid().ToString("N");
+        string id = Guid.NewGuid().ToString("N");
 
         // Build the "message" object using A2A model types so that downstream consumers can
         // deserialize with the official library if they wish.
@@ -64,15 +64,15 @@ public static class A2AHelper
     {
         try
         {
-            var doc = JsonNode.Parse(json)?.AsObject();
+            JsonObject? doc = JsonNode.Parse(json)?.AsObject();
             if (doc?["method"]?.GetValue<string>() != MethodName) return (null, null, null);
-            var @params = doc?["params"]?.AsObject();
-            var msg = @params?["message"]?.AsObject();
-            var textPart = msg?["parts"]?[0]?["text"]?.GetValue<string>();
+            JsonObject? @params = doc?["params"]?.AsObject();
+            JsonObject? msg = @params?["message"]?.AsObject();
+            string? textPart = msg?["parts"]?[0]?["text"]?.GetValue<string>();
 
-            var meta = @params?["metadata"]?.AsObject();
-            var from = meta?["from"]?.GetValue<string>();
-            var to = meta?["to"]?.GetValue<string>();
+            JsonObject? meta = @params?["metadata"]?.AsObject();
+            string? from = meta?["from"]?.GetValue<string>();
+            string? to = meta?["to"]?.GetValue<string>();
 
             return (textPart, from, to);
         }

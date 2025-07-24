@@ -39,7 +39,7 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
 
             _processor.ProcessMessageAsync += async args =>
             {
-                var json = args.Message.Body.ToString();
+                string json = args.Message.Body.ToString();
                 try
                 {
                     JsonDocument.Parse(json);
@@ -75,7 +75,7 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
         try
         {
             var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("id", out var idProperty))
+            if (doc.RootElement.TryGetProperty("id", out JsonElement idProperty))
             {
                 message.CorrelationId = idProperty.GetString();
             }

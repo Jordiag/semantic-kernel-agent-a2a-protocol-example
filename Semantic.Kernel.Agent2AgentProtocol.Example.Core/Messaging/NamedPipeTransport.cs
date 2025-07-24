@@ -58,7 +58,7 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
         var reader = new StreamReader(_stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
         while (!_cts?.IsCancellationRequested ?? false)
         {
-            var line = await reader.ReadLineAsync();
+            string? line = await reader.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             try

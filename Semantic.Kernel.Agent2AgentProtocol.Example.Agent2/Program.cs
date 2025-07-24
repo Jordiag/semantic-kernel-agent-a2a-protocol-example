@@ -11,27 +11,24 @@ services.AddLogging(b => b.AddConsole());
 // Configure transport via options
 services.Configure<TransportOptions>(cfg =>
 {
-    cfg.UseAzure = true;
+    cfg.UseAzure = false;
     cfg.ConnectionString = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTIONSTRING")!;
     cfg.QueueOrPipeName = "a2a-demo";
 });
 
 services.AddSingleton<IMessagingTransport>(sp =>
 {
-    var options = sp.GetRequiredService<IOptions<TransportOptions>>().Value;
-    if (options.UseAzure)
-    {
-        return new AzureServiceBusTransport(options.ConnectionString!, options.QueueOrPipeName, isReceiver: false,
-            sp.GetRequiredService<ILogger<AzureServiceBusTransport>>());
-    }
-
-    return new NamedPipeTransport(options.QueueOrPipeName, isServer: false,
+    TransportOptions options = sp.GetRequiredService<IOptions<TransportOptions>>().Value;
+    return options.UseAzure
+        ? new AzureServiceBusTransport(options.ConnectionString!, options.QueueOrPipeName, isReceiver: false,
+            sp.GetRequiredService<ILogger<AzureServiceBusTransport>>())
+        : new NamedPipeTransport(options.QueueOrPipeName, isServer: false,
         sp.GetRequiredService<ILogger<NamedPipeTransport>>());
 });
 
 services.AddSingleton<Kernel>(_ => Kernel.CreateBuilder().Build());
 services.AddSingleton<Agent2>();
 
-var provider = services.BuildServiceProvider();
-var agent = provider.GetRequiredService<Agent2>();
+ServiceProvider provider = services.BuildServiceProvider();
+Agent2 agent = provider.GetRequiredService<Agent2>();
 await agent.RunAsync(CancellationToken.None);
