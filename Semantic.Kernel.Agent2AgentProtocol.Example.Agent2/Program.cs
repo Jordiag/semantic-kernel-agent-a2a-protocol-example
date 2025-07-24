@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Agent2;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
@@ -7,24 +8,26 @@ using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 var services = new ServiceCollection();
 services.AddLogging(b => b.AddConsole());
 
-// Configure transport
-var useAzure = false;
-
-if (useAzure)
+// Configure transport via options
+services.Configure<TransportOptions>(cfg =>
 {
-    var connStr = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTIONSTRING")
-                  ?? throw new InvalidOperationException("Set SERVICEBUS_CONNECTIONSTRING");
+    cfg.UseAzure = true;
+    cfg.ConnectionString = Environment.GetEnvironmentVariable("SERVICEBUS_CONNECTIONSTRING")!;
+    cfg.QueueOrPipeName = "a2a-demo";
+});
 
-    services.AddSingleton<IMessagingTransport>(sp =>
-        new AzureServiceBusTransport(connStr, "a2a-demo-queue", isReceiver: false,
-            sp.GetRequiredService<ILogger<AzureServiceBusTransport>>())); // Agent2 is sender
-}
-else
+services.AddSingleton<IMessagingTransport>(sp =>
 {
-    services.AddSingleton<IMessagingTransport>(sp =>
-        new NamedPipeTransport("a2a-demo-pipe", isServer: false,
-            sp.GetRequiredService<ILogger<NamedPipeTransport>>())); // Agent2 is client
-}
+    var options = sp.GetRequiredService<IOptions<TransportOptions>>().Value;
+    if (options.UseAzure)
+    {
+        return new AzureServiceBusTransport(options.ConnectionString!, options.QueueOrPipeName, isReceiver: false,
+            sp.GetRequiredService<ILogger<AzureServiceBusTransport>>());
+    }
+
+    return new NamedPipeTransport(options.QueueOrPipeName, isServer: false,
+        sp.GetRequiredService<ILogger<NamedPipeTransport>>());
+});
 
 services.AddSingleton<Kernel>(_ => Kernel.CreateBuilder().Build());
 services.AddSingleton<Agent2>();
