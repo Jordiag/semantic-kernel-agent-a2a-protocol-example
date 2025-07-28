@@ -7,11 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="A2A" Version="0.1.0-preview.1" />
-    <PackageReference Include="A2A.AspNetCore" Version="0.1.0-preview.1" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.60.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\A2A\A2A.csproj" />
   </ItemGroup>
 
 </Project>
