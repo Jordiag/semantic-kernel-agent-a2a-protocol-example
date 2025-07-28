@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
@@ -21,15 +21,15 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
     private ServiceBusProcessor? _processor;
     private Func<string, Task>? _handler;
     private readonly ILogger<AzureServiceBusTransport>? _logger = logger;
-    private CancellationTokenSource? _cancellationTokenSource;
+    private CancellationTokenSource? _cts;
 
     public async Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
         _handler = onMessageReceived;
         _sender = _client.CreateSender(_queueName);
-        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        if(_isReceiver)
+        if (_isReceiver)
         {
             _processor = _client.CreateProcessor(_queueName, new ServiceBusProcessorOptions
             {
@@ -43,14 +43,13 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                 try
                 {
                     JsonDocument.Parse(json);
-                    _logger?.LogDebug("Received JSON: {Json}", json);
-                    if(_handler != null)
-                        await _handler(json);
+                    _logger?.LogDebug("Received JSON: {json}", json);
+                    if (_handler != null) await _handler(json);
                 }
-                catch(JsonException ex)
+                catch (JsonException)
                 {
                     // Ignore malformed payloads
-                    _logger?.LogWarning(ex, "Received malformed JSON");
+                    _logger?.LogWarning("Received malformed JSON");
                 }
 
                 await args.CompleteMessageAsync(args.Message);
@@ -62,7 +61,7 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                 return Task.CompletedTask;
             };
 
-            await _processor.StartProcessingAsync(_cancellationTokenSource.Token);
+            await _processor.StartProcessingAsync(_cts.Token);
         }
     }
 
@@ -76,26 +75,24 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
         try
         {
             var doc = JsonDocument.Parse(json);
-            if(doc.RootElement.TryGetProperty("id", out JsonElement idProperty))
+            if (doc.RootElement.TryGetProperty("id", out JsonElement idProperty))
             {
                 message.CorrelationId = idProperty.GetString();
             }
         }
-        catch(JsonException ex)
+        catch (JsonException)
         {
-            _logger?.LogWarning(ex, "Malformed JSON when sending");
+            _logger?.LogWarning("Malformed JSON when sending");
         }
         await _sender.SendMessageAsync(message);
-        _logger?.LogDebug("Sent JSON: {Json}", json);
+        _logger?.LogDebug("Sent JSON: {json}", json);
     }
 
     public async Task StopProcessingAsync()
     {
-        if(_cancellationTokenSource != null)
-            await _cancellationTokenSource.CancelAsync();
-        if(_processor != null)
-            await _processor.StopProcessingAsync();
+        _cts?.Cancel();
+        if (_processor != null) await _processor.StopProcessingAsync();
         await _client.DisposeAsync();
-        _cancellationTokenSource?.Dispose();
+        _cts?.Dispose();
     }
 }
