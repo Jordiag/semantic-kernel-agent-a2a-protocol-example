@@ -1,6 +1,5 @@
-using A2A.Models;
-using System.Text.Json.Nodes;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using A2A;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
@@ -20,40 +19,32 @@ public static class A2AHelper
     /// </summary>
     public static string BuildTaskRequest(string text, string from, string to)
     {
-        string id = Guid.NewGuid().ToString("N");
-
-        // Build the "message" object using A2A model types so that downstream consumers can
-        // deserialize with the official library if they wish.
-        var message = new
+        // Build message using the official A2A models
+        var msg = new Message
         {
-            role = MessageRole.User.ToString().ToLowerInvariant(),
-            parts = new object[]
+            Role = MessageRole.User,
+            MessageId = Guid.NewGuid().ToString(),
+            Parts = [new TextPart { Text = text }]
+        };
+
+        var sendParams = new MessageSendParams
+        {
+            Message = msg,
+            Metadata = new Dictionary<string, JsonElement>
             {
-                new
-                {
-                    type = "text",
-                    text
-                }
+                ["from"] = JsonSerializer.SerializeToElement(from),
+                ["to"] = JsonSerializer.SerializeToElement(to)
             }
         };
 
-        var payload = new
+        var request = new JsonRpcRequest
         {
-            jsonrpc = JsonRpcVersion,
-            id,
-            method = MethodName,
-            @params = new
-            {
-                message,
-                metadata = new
-                {
-                    from,
-                    to
-                }
-            }
+            Id = Guid.NewGuid().ToString("N"),
+            Method = MethodName,
+            Params = JsonSerializer.SerializeToElement(sendParams, A2AJsonUtilities.JsonContext.Default.MessageSendParams)
         };
 
-        return JsonSerializer.Serialize(payload);
+        return JsonSerializer.Serialize(request, A2AJsonUtilities.JsonContext.Default.JsonRpcRequest);
     }
 
     /// <summary>
@@ -64,15 +55,18 @@ public static class A2AHelper
     {
         try
         {
-            JsonObject? doc = JsonNode.Parse(json)?.AsObject();
-            if (doc?["method"]?.GetValue<string>() != MethodName) return (null, null, null);
-            JsonObject? @params = doc?["params"]?.AsObject();
-            JsonObject? msg = @params?["message"]?.AsObject();
-            string? textPart = msg?["parts"]?[0]?["text"]?.GetValue<string>();
+            JsonRpcRequest? request = JsonSerializer.Deserialize(json, A2AJsonUtilities.JsonContext.Default.JsonRpcRequest);
+            if (request?.Method != MethodName) return (null, null, null);
 
-            JsonObject? meta = @params?["metadata"]?.AsObject();
-            string? from = meta?["from"]?.GetValue<string>();
-            string? to = meta?["to"]?.GetValue<string>();
+            MessageSendParams? parameters = request.Params?.Deserialize(A2AJsonUtilities.JsonContext.Default.MessageSendParams);
+            if (parameters?.Message == null) return (null, null, null);
+
+            string? textPart = parameters.Message.Parts.OfType<TextPart>().FirstOrDefault()?.Text;
+
+            parameters.Metadata?.TryGetValue("from", out JsonElement fromEl);
+            parameters.Metadata?.TryGetValue("to", out JsonElement toEl);
+            string? from = fromEl.GetString();
+            string? to = toEl.GetString();
 
             return (textPart, from, to);
         }
