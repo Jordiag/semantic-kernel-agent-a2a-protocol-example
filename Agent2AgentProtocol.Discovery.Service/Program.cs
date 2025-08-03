@@ -1,6 +1,7 @@
 using Agent2AgentProtocol.Discovery.Service;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://localhost:5000");
 builder.Services.AddSingleton<ICapabilityRegistry, InMemoryCapabilityRegistry>();
 
 WebApplication app = builder.Build();
