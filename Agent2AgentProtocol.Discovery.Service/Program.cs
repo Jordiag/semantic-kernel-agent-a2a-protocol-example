@@ -5,9 +5,9 @@ builder.Services.AddSingleton<ICapabilityRegistry, InMemoryCapabilityRegistry>()
 
 WebApplication app = builder.Build();
 
-app.MapPost("/register", (AgentCapability capability, AgentEndpoint endpoint, ICapabilityRegistry registry) =>
+app.MapPost("/register", (CapabilityRegistration registration, ICapabilityRegistry registry) =>
 {
-    registry.RegisterCapability(capability, endpoint);
+    registry.RegisterCapability(registration.Capability, registration.Endpoint);
     return Results.Ok();
 });
 
