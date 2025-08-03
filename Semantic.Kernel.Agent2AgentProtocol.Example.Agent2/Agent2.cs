@@ -14,8 +14,8 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
 
         await _transport.StartProcessingAsync(async json =>
         {
-            (string text, string from, string to) = A2AHelper.ParseTaskRequest(json);
-            if (text == null) return;  // not an A2A task message
+            (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(json);
+            if (text == null) return;  // not a task message
             if (to != "Agent2")
             {
                 Console.WriteLine($"[Agent‑2] ignored message for {to}");
@@ -45,6 +45,11 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
             string responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);
+
+        // Advertise our capabilities after the listener is ready
+        await Task.Delay(1_000, cancellationToken);
+        string cardJson = A2AHelper.BuildCapabilitiesCard("Agent2", "Agent1");
+        await _transport.SendMessageAsync(cardJson);
 
         Console.ReadLine();
         await _transport.StopProcessingAsync();
