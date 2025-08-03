@@ -16,6 +16,13 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
     {
         Console.WriteLine("[Agent‑2] waiting for task...");
 
+        // Register capabilities with discovery service
+        using var client = new HttpClient();
+        var capability = new AgentCapability { Name = "reverse", AgentId = "Agent2" };
+        string transportType = _options.UseAzure ? "ServiceBus" : "NamedPipe";
+        var endpoint = new AgentEndpoint { TransportType = transportType, Address = _options.QueueOrPipeName };
+        await client.PostAsJsonAsync("http://localhost:5000/register", new { capability, endpoint }, cancellationToken);
+
         await _transport.StartProcessingAsync(async json =>
         {
             (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(json);
@@ -49,13 +56,6 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
             string responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);
-
-        // Register capabilities with discovery service
-        using var client = new HttpClient();
-        var capability = new AgentCapability { Name = "reverse", AgentId = "Agent2" };
-        string transportType = _options.UseAzure ? "ServiceBus" : "NamedPipe";
-        var endpoint = new AgentEndpoint { TransportType = transportType, Address = _options.QueueOrPipeName };
-        await client.PostAsJsonAsync("http://localhost:5000/register", new { capability, endpoint }, cancellationToken);
 
         Console.ReadLine();
         await _transport.StopProcessingAsync();

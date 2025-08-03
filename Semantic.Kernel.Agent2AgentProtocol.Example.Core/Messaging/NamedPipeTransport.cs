@@ -88,8 +88,8 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
 
     public async Task StopProcessingAsync()
     {
-        _cts?.Cancel();
-        await _stream.DisposeAsync();
+        if (_cts != null) await _cts.CancelAsync();
+        if(_stream != null) await _stream.DisposeAsync();
         _cts?.Dispose();
         await Task.Yield();
     }

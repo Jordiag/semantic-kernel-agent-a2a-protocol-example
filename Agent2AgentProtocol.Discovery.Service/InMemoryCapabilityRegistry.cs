@@ -13,6 +13,6 @@ public class InMemoryCapabilityRegistry : ICapabilityRegistry
 
     public AgentEndpoint? ResolveCapability(string capabilityName)
     {
-        return _capabilities.TryGetValue(capabilityName, out var endpoint) ? endpoint : null;
+        return _capabilities.TryGetValue(capabilityName, out AgentEndpoint? endpoint) ? endpoint : null;
     }
 }

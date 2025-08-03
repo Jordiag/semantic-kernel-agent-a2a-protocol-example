@@ -1,9 +1,9 @@
 using Agent2AgentProtocol.Discovery.Service;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<ICapabilityRegistry, InMemoryCapabilityRegistry>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.MapPost("/register", (AgentCapability capability, AgentEndpoint endpoint, ICapabilityRegistry registry) =>
 {
@@ -13,8 +13,8 @@ app.MapPost("/register", (AgentCapability capability, AgentEndpoint endpoint, IC
 
 app.MapGet("/resolve/{capability}", (string capability, ICapabilityRegistry registry) =>
 {
-    var endpoint = registry.ResolveCapability(capability);
+    AgentEndpoint? endpoint = registry.ResolveCapability(capability);
     return endpoint is not null ? Results.Ok(endpoint) : Results.NotFound();
 });
 
-app.Run();
+await app.RunAsync();
