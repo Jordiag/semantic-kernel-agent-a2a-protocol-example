@@ -1,78 +1,121 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using A2A;
+using Microsoft.Agents.Core.Models;
+using Microsoft.Agents.Core.Serialization;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 
 /// <summary>
-/// Utility helpers for constructing and parsing A2A protocol JSON‑RPC payloads.
-/// We purposely keep the dependency surface minimal and rely on the A2A model types
-/// (e.g. <see cref="TextPart"/>, <see cref="MessageRole"/>) for schema correctness.
+/// Helper methods for creating and parsing Activity Protocol payloads.
 /// </summary>
 public static class A2AHelper
 {
-    private const string JsonRpcVersion = "2.0";
-    private const string MethodName = "agent.task";
+    private const string ConversationId = "a2a-demo";
 
     /// <summary>
-    /// Creates a JSON‑RPC request message that complies with the A2A specification.
+    /// Build an Activity message describing this agent's capabilities using a Hero card.
     /// </summary>
-    public static string BuildTaskRequest(string text, string from, string to)
+    public static string BuildCapabilitiesCard(string from, string to)
     {
-        // Build message using the official A2A models
-        var msg = new Message
+        var card = new HeroCard
         {
-            Role = MessageRole.User,
-            MessageId = Guid.NewGuid().ToString(),
-            Parts = [new TextPart { Text = text }]
+            Title = "Agent capabilities",
+            Buttons =
+            [
+                new CardAction(type: ActionTypes.MessageBack, title: "reverse", value: "reverse"),
+                new CardAction(type: ActionTypes.MessageBack, title: "upper", value: "upper")
+            ]
         };
 
-        var sendParams = new MessageSendParams
+        var activity = new Activity
         {
-            Message = msg,
-            Metadata = new Dictionary<string, JsonElement>
-            {
-                ["from"] = JsonSerializer.SerializeToElement(from),
-                ["to"] = JsonSerializer.SerializeToElement(to)
-            }
+            Type = ActivityTypes.Message,
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = DateTimeOffset.UtcNow,
+            From = new ChannelAccount(id: from),
+            Recipient = new ChannelAccount(id: to),
+            Conversation = new ConversationAccount(id: ConversationId),
+            Attachments = [card.ToAttachment()]
         };
 
-        var request = new JsonRpcRequest
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Method = MethodName,
-            Params = JsonSerializer.SerializeToElement(sendParams, A2AJsonUtilities.JsonContext.Default.MessageSendParams)
-        };
-
-        return JsonSerializer.Serialize(request, A2AJsonUtilities.JsonContext.Default.JsonRpcRequest);
+        return ProtocolJsonSerializer.ToJson(activity);
     }
 
     /// <summary>
-    /// Extracts the user‑supplied text and routing metadata from an A2A JSON‑RPC payload.
-    /// Returns <c>(null, null, null)</c> if the payload doesn't match the expected shape.
+    /// Build an Activity message used to send a text task.
+    /// </summary>
+    public static string BuildTaskRequest(string text, string from, string to)
+    {
+        var activity = new Activity
+        {
+            Type = ActivityTypes.Message,
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = DateTimeOffset.UtcNow,
+            From = new ChannelAccount(id: from),
+            Recipient = new ChannelAccount(id: to),
+            Conversation = new ConversationAccount(id: ConversationId),
+            Text = text
+        };
+
+        return ProtocolJsonSerializer.ToJson(activity);
+    }
+
+    /// <summary>
+    /// Parse an Activity message looking for a text task request.
+    /// Returns (null, null, null) if the payload isn't a valid message.
     /// </summary>
     public static (string? text, string? from, string? to) ParseTaskRequest(string json)
     {
         try
         {
-            JsonRpcRequest? request = JsonSerializer.Deserialize(json, A2AJsonUtilities.JsonContext.Default.JsonRpcRequest);
-            if (request?.Method != MethodName) return (null, null, null);
+            Activity activity = ProtocolJsonSerializer.ToObject<Activity>(json);
+            if (activity.Type != ActivityTypes.Message || string.IsNullOrWhiteSpace(activity.Text))
+            {
+                return (null, null, null);
+            }
 
-            MessageSendParams? parameters = request.Params?.Deserialize(A2AJsonUtilities.JsonContext.Default.MessageSendParams);
-            if (parameters?.Message == null) return (null, null, null);
-
-            string? textPart = parameters.Message.Parts.OfType<TextPart>().FirstOrDefault()?.Text;
-
-            parameters.Metadata?.TryGetValue("from", out JsonElement fromEl);
-            parameters.Metadata?.TryGetValue("to", out JsonElement toEl);
-            string? from = fromEl.GetString();
-            string? to = toEl.GetString();
-
-            return (textPart, from, to);
+            return (activity.Text, activity.From?.Id, activity.Recipient?.Id);
         }
         catch
         {
             return (null, null, null);
         }
     }
+
+    /// <summary>
+    /// Parse a capabilities card and return the set of declared actions along with the sender id.
+    /// Returns null if the payload isn't a capabilities card.
+    /// </summary>
+    public static (IList<string>? capabilities, string? from) ParseCapabilityCard(string json)
+    {
+        try
+        {
+            Activity activity = ProtocolJsonSerializer.ToObject<Activity>(json);
+            if (activity.Attachments == null || activity.Attachments.Count == 0)
+            {
+                return (null, null);
+            }
+
+            List<string> capabilities = new();
+            foreach (var attachment in activity.Attachments)
+            {
+                if (attachment.ContentType == HeroCard.ContentType)
+                {
+                    HeroCard card = ProtocolJsonSerializer.ToObject<HeroCard>(attachment.Content);
+                    foreach (var button in card.Buttons)
+                    {
+                        if (button?.Value != null)
+                        {
+                            capabilities.Add(button.Value.ToString()!);
+                        }
+                    }
+                }
+            }
+
+            return capabilities.Count > 0 ? (capabilities, activity.From?.Id) : (null, null);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
 }
+
