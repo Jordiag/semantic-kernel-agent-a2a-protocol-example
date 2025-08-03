@@ -90,8 +90,31 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
 
     public async Task StopProcessingAsync()
     {
-        if(_cts != null) await _cts.CancelAsync();
-        if (_processor != null) await _processor.StopProcessingAsync();
+        if (_cts != null)
+        {
+            await _cts.CancelAsync();
+        }
+
+        if (_processor != null)
+        {
+            await _processor.StopProcessingAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopProcessingAsync();
+
+        if (_sender != null)
+        {
+            await _sender.DisposeAsync();
+        }
+
+        if (_processor != null)
+        {
+            await _processor.DisposeAsync();
+        }
+
         await _client.DisposeAsync();
         _cts?.Dispose();
     }
