@@ -1,6 +1,5 @@
 using System.Text.Json;
 using A2A;
-using System.Linq;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 
