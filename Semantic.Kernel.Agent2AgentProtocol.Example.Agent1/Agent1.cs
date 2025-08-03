@@ -11,16 +11,9 @@ public class Agent1(IMessagingTransport transport)
     {
         Console.WriteLine("[Agent‑1] starting and listening...");
 
-        // Handle capability cards and task responses
+        // Handle task responses
         await _transport.StartProcessingAsync(async json =>
         {
-            (IList<string> capabilities, string from) = A2AHelper.ParseCapabilityCard(json);
-            if (capabilities != null)
-            {
-                Console.WriteLine($"[Agent‑1] capabilities from {from}: {string.Join(", ", capabilities)}");
-                return;
-            }
-
             (string? text, _, _) = A2AHelper.ParseTaskRequest(json);
             if (text != null)
             {

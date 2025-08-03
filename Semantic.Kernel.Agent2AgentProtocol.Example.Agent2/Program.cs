@@ -20,9 +20,9 @@ services.AddSingleton<IMessagingTransport>(sp =>
 {
     TransportOptions options = sp.GetRequiredService<IOptions<TransportOptions>>().Value;
     return options.UseAzure
-        ? new AzureServiceBusTransport(options.ConnectionString!, options.QueueOrPipeName, isReceiver: false,
+        ? new AzureServiceBusTransport(options.ConnectionString!, options.QueueOrPipeName, isReceiver: true,
             sp.GetRequiredService<ILogger<AzureServiceBusTransport>>())
-        : new NamedPipeTransport(options.QueueOrPipeName, isServer: false,
+        : new NamedPipeTransport(options.QueueOrPipeName, isServer: true,
         sp.GetRequiredService<ILogger<NamedPipeTransport>>());
 });
 

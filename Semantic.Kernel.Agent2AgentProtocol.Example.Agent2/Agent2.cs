@@ -1,12 +1,16 @@
+using Agent2AgentProtocol.Discovery.Service;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.SemanticKernel;
+using System.Net.Http.Json;
+using Microsoft.Extensions.Options;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Agent2;
 
-public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kernel kernel)
+public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kernel kernel, IOptions<TransportOptions> options)
 {
     private readonly IMessagingTransport _transport = transport;
+    private readonly TransportOptions _options = options.Value;
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
@@ -46,10 +50,12 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);
 
-        // Advertise our capabilities after the listener is ready
-        await Task.Delay(1_000, cancellationToken);
-        string cardJson = A2AHelper.BuildCapabilitiesCard("Agent2", "Agent1");
-        await _transport.SendMessageAsync(cardJson);
+        // Register capabilities with discovery service
+        using var client = new HttpClient();
+        var capability = new AgentCapability { Name = "reverse", AgentId = "Agent2" };
+        string transportType = _options.UseAzure ? "ServiceBus" : "NamedPipe";
+        var endpoint = new AgentEndpoint { TransportType = transportType, Address = _options.QueueOrPipeName };
+        await client.PostAsJsonAsync("http://localhost:5000/register", new { capability, endpoint }, cancellationToken);
 
         Console.ReadLine();
         await _transport.StopProcessingAsync();

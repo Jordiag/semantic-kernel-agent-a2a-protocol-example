@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Semantic.Kernel.Agent2AgentProtocol.Example.Core\Semantic.Kernel.Agent2AgentProtocol.Example.Core.csproj" />
+    <ProjectReference Include="..\Agent2AgentProtocol.Discovery.Service\Agent2AgentProtocol.Discovery.Service.csproj" />
   </ItemGroup>
 
   <ItemGroup>
