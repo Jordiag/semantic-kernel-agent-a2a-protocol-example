@@ -18,6 +18,8 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
     private readonly ILogger<NamedPipeTransport>? _logger = logger;
     private Func<string, Task>? _handler;
     private CancellationTokenSource? _cts;
+    private StreamWriter? _writer;
+    private Task? _readLoopTask;
 
     public async Task StartProcessingAsync(Func<string, Task> onMessageReceived, CancellationToken cancellationToken)
     {
@@ -48,7 +50,8 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
             _stream = client;
         }
 
-        _ = Task.Run(ReadLoopAsync, _cts.Token); // fire‑and‑forget
+        _writer = new StreamWriter(_stream, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
+        _readLoopTask = Task.Run(ReadLoopAsync, _cts.Token);
     }
 
     private async Task ReadLoopAsync()
@@ -81,16 +84,37 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
         if (_stream is not { CanWrite: true })
             throw new InvalidOperationException("Pipe not connected.");
 
-        await using var writer = new StreamWriter(_stream, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
-        await writer.WriteLineAsync(json);
+        _writer ??= new StreamWriter(_stream, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
+        await _writer.WriteLineAsync(json);
         _logger?.LogDebug("Sent JSON: {json}", json);
     }
 
     public async Task StopProcessingAsync()
     {
-        if (_cts != null) await _cts.CancelAsync();
-        if(_stream != null) await _stream.DisposeAsync();
+        if (_cts != null)
+        {
+            await _cts.CancelAsync();
+        }
+
+        if (_readLoopTask != null)
+        {
+            await _readLoopTask;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopProcessingAsync();
+        if (_writer != null)
+        {
+            await _writer.DisposeAsync();
+        }
+
+        if (_stream != null)
+        {
+            await _stream.DisposeAsync();
+        }
+
         _cts?.Dispose();
-        await Task.Yield();
     }
 }
