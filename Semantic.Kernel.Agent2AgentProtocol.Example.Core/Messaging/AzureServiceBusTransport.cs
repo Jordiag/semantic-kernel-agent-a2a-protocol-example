@@ -46,10 +46,10 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                     _logger?.LogDebug("Received JSON: {json}", json);
                     if (_handler != null) await _handler(json);
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
                     // Ignore malformed payloads
-                    _logger?.LogWarning("Received malformed JSON");
+                    _logger?.LogWarning(ex,"Received malformed JSON");
                 }
 
                 await args.CompleteMessageAsync(args.Message);
@@ -80,9 +80,9 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
                 message.CorrelationId = idProperty.GetString();
             }
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            _logger?.LogWarning("Malformed JSON when sending");
+            _logger?.LogWarning(ex, "Malformed JSON when sending");
         }
         await _sender.SendMessageAsync(message);
         _logger?.LogDebug("Sent JSON: {json}", json);
@@ -90,7 +90,7 @@ public sealed class AzureServiceBusTransport(string connectionString, string que
 
     public async Task StopProcessingAsync()
     {
-        _cts?.Cancel();
+        if(_cts != null) await _cts.CancelAsync();
         if (_processor != null) await _processor.StopProcessingAsync();
         await _client.DisposeAsync();
         _cts?.Dispose();

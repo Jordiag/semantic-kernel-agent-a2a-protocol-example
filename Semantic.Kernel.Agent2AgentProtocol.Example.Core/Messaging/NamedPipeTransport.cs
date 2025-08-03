@@ -68,11 +68,10 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
                 _logger?.LogDebug("Received JSON: {json}", line);
                 await _handler(line);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
                 // Skip malformed payloads to avoid breaking the loop.
-                _logger?.LogWarning("Received malformed JSON");
-                continue;
+                _logger?.LogWarning(ex, "Received malformed JSON");
             }
         }
     }
@@ -90,7 +89,7 @@ public sealed class NamedPipeTransport(string pipeName, bool isServer, ILogger<N
     public async Task StopProcessingAsync()
     {
         _cts?.Cancel();
-        _stream?.Dispose();
+        await _stream.DisposeAsync();
         _cts?.Dispose();
         await Task.Yield();
     }

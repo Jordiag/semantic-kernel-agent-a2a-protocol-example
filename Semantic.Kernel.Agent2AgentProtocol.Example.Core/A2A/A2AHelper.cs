@@ -95,12 +95,12 @@ public static class A2AHelper
             }
 
             List<string> capabilities = new();
-            foreach (var attachment in activity.Attachments)
+            foreach (Attachment? attachment in activity.Attachments)
             {
                 if (attachment.ContentType == HeroCard.ContentType)
                 {
                     HeroCard card = ProtocolJsonSerializer.ToObject<HeroCard>(attachment.Content);
-                    foreach (var button in card.Buttons)
+                    foreach (CardAction? button in card.Buttons)
                     {
                         if (button?.Value != null)
                         {
