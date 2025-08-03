@@ -17,7 +17,7 @@ public class Agent1(IMessagingTransport transport)
             (string? text, _, _) = A2AHelper.ParseTaskRequest(json);
             if (text != null)
             {
-                Console.WriteLine($"[Agent‑1] recieved response from another agent ← '{text}'");
+                Console.WriteLine($"[Agent‑1] received response from another agent ← '{text}'");
             }
 
             await Task.CompletedTask;
