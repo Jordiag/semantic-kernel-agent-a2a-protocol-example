@@ -22,6 +22,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
         string transportType = _options.UseAzure ? "ServiceBus" : "NamedPipe";
         var endpoint = new AgentEndpoint { TransportType = transportType, Address = _options.QueueOrPipeName };
         await client.PostAsJsonAsync("http://localhost:5000/register", new { capability, endpoint }, cancellationToken);
+        Console.WriteLine("[Agent‑2] Registed capabilities with discovery service");
 
         await _transport.StartProcessingAsync(async json =>
         {

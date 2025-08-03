@@ -1,4 +1,4 @@
-using Agent2AgentProtocol.Discovery.Service;
+﻿using Agent2AgentProtocol.Discovery.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Agent1;
@@ -15,14 +15,15 @@ using(var client = new HttpClient())
     endpoint = null;
     Exception? lastException = null;
 
+    Console.WriteLine("[Agent‑1] Quering A2A discovery service for an agent with string reverse functionality");
     for(int attempt = 1; attempt <= 20; attempt++)
     {
         try
         {
             endpoint = await client.GetFromJsonAsync<AgentEndpoint>("http://localhost:5000/resolve/reverse");
-
+            Console.WriteLine($"[Agent‑1] A2A discovery provided  agent endpoint: {endpoint.Address} {endpoint.TransportType}");
             if(endpoint != null)
-                break; // Success
+                break; 
         }
         catch(Exception ex)
         {
