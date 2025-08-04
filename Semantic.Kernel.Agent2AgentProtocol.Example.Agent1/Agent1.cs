@@ -23,7 +23,7 @@ public class Agent1(IMessagingTransport transport)
             await Task.CompletedTask;
         }, cancellationToken);
 
-        await Task.Delay(2_000, cancellationToken); // ensure Agent‑2 listener is ready
+        await Task.Delay(2000, cancellationToken); // ensure Agent‑2 listener is ready
 
         Console.WriteLine("[Agent‑1] → sending REVERSE task...");
         string jsonRequest = A2AHelper.BuildTaskRequest("reverse: hello from Agent 1", "Agent1", "Agent2");

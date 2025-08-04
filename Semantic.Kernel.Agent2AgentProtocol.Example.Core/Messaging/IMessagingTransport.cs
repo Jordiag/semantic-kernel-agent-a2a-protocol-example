@@ -7,7 +7,7 @@ namespace Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging
     /// over a specific medium (e.g., named pipes, Azure Service Bus, WebSockets).
     /// The transport remains message‑shape agnostic: it only deals with raw JSON payloads.
     /// </summary>
-    public interface IMessagingTransport : IAsyncDisposable
+    public interface IMessagingTransport
     {
         /// <summary>
         /// Starts listening for incoming A2A messages and invokes the supplied delegate for each
