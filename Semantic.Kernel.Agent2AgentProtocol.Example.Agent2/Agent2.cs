@@ -1,4 +1,6 @@
 using Agent2AgentProtocol.Discovery.Service;
+using System.Text.Json;
+using A2A;
 using Microsoft.Extensions.Logging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
@@ -32,7 +34,10 @@ public class Agent2(
 
         await _transport.StartProcessingAsync(async json =>
         {
-            (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(json);
+            Message? message = JsonSerializer.Deserialize<Message>(json, A2AJsonUtilities.DefaultOptions);
+            if (message == null) return; // not a valid message
+
+            (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(message);
             if (text == null) return;  // not a task message
             if (to != "Agent2")
             {
@@ -60,7 +65,8 @@ public class Agent2(
 
             _logger.LogInformation("[Agent-2] → responding with '{Result}'", result);
 
-            string responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
+            Message response = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
+            string responseJson = JsonSerializer.Serialize(response, A2AJsonUtilities.DefaultOptions);
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);
 
