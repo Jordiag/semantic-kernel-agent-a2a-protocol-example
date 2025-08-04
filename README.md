@@ -1,4 +1,4 @@
-# Semantic Kernel A2A protocol nad A2A Discovery Service Example
+# Semantic Kernel A2A protocol and A2A Discovery Service Example
 
 This repository showcases a playful yet practical conversation between two autonomous agents using the [a2a‑dotnet](https://github.com/a2aproject/a2a-dotnet) SDK and [Semantic Kernel](https://github.com/microsoft/semantic-kernel).  It demonstrates how agents can discover each other, exchange JSON‑RPC messages, and stream results back in real time — all while keeping the code simple and transparent.
 
