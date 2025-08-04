@@ -13,9 +13,9 @@ public static class A2AHelper
     /// <summary>
     /// Build an <see cref="AgentCard"/> describing this agent's capabilities.
     /// </summary>
-    public static string BuildCapabilitiesCard(string from, string to)
+    public static AgentCard BuildCapabilitiesCard(string from, string to)
     {
-        var card = new AgentCard
+        return new AgentCard
         {
             Name = from,
             Description = "Agent capabilities",
@@ -30,16 +30,14 @@ public static class A2AHelper
                 new AgentSkill { Id = "upper", Name = "upper", Description = "Uppercase text", Tags = [] }
             ]
         };
-
-        return JsonSerializer.Serialize(card, s_options);
     }
 
     /// <summary>
     /// Build a <see cref="Message"/> used to send a text task.
     /// </summary>
-    public static string BuildTaskRequest(string text, string from, string to)
+    public static Message BuildTaskRequest(string text, string from, string to)
     {
-        var message = new Message
+        return new Message
         {
             Role = MessageRole.Agent,
             MessageId = Guid.NewGuid().ToString(),
@@ -50,51 +48,33 @@ public static class A2AHelper
                 ["to"] = JsonSerializer.SerializeToElement(to, s_options)
             }
         };
-
-        return JsonSerializer.Serialize(message, s_options);
     }
 
     /// <summary>
     /// Parse a message looking for a text task request.
     /// Returns (null, null, null) if the payload isn't a valid message.
     /// </summary>
-    public static (string? text, string? from, string? to) ParseTaskRequest(string json)
+    public static (string? text, string? from, string? to) ParseTaskRequest(Message message)
     {
-        try
-        {
-            Message message = JsonSerializer.Deserialize<Message>(json, s_options)!;
-            string? text = message.Parts.OfType<TextPart>().FirstOrDefault()?.Text;
-            string? from = message.Metadata != null && message.Metadata.TryGetValue("from", out JsonElement fromElem)
-                ? fromElem.GetString()
-                : null;
-            string? to = message.Metadata != null && message.Metadata.TryGetValue("to", out JsonElement toElem)
-                ? toElem.GetString()
-                : null;
+        string? text = message.Parts.OfType<TextPart>().FirstOrDefault()?.Text;
+        string? from = message.Metadata != null && message.Metadata.TryGetValue("from", out JsonElement fromElem)
+            ? fromElem.GetString()
+            : null;
+        string? to = message.Metadata != null && message.Metadata.TryGetValue("to", out JsonElement toElem)
+            ? toElem.GetString()
+            : null;
 
-            return text != null ? (text, from, to) : (null, null, null);
-        }
-        catch
-        {
-            return (null, null, null);
-        }
+        return text != null ? (text, from, to) : (null, null, null);
     }
 
     /// <summary>
     /// Parse a capabilities card and return the set of declared skills along with the agent name.
     /// Returns null if the payload isn't a capabilities card.
     /// </summary>
-    public static (IList<string>? capabilities, string? from) ParseCapabilityCard(string json)
+    public static (IList<string>? capabilities, string? from) ParseCapabilityCard(AgentCard card)
     {
-        try
-        {
-            AgentCard card = JsonSerializer.Deserialize<AgentCard>(json, s_options)!;
-            IList<string> capabilities = card.Skills.Select(skill => skill.Id).ToList();
-            return capabilities.Count > 0 ? (capabilities, card.Name) : (null, null);
-        }
-        catch
-        {
-            return (null, null);
-        }
+        IList<string> capabilities = card.Skills.Select(skill => skill.Id).ToList();
+        return capabilities.Count > 0 ? (capabilities, card.Name) : (null, null);
     }
 }
 
