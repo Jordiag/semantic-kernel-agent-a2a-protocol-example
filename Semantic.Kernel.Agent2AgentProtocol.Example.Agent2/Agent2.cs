@@ -1,4 +1,5 @@
 using Agent2AgentProtocol.Discovery.Service;
+using Microsoft.Extensions.Logging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.SemanticKernel;
@@ -7,14 +8,19 @@ using Microsoft.Extensions.Options;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Agent2;
 
-public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kernel kernel, IOptions<TransportOptions> options)
+public class Agent2(
+    IMessagingTransport transport,
+    Microsoft.SemanticKernel.Kernel kernel,
+    IOptions<TransportOptions> options,
+    ILogger<Agent2> logger)
 {
     private readonly IMessagingTransport _transport = transport;
     private readonly TransportOptions _options = options.Value;
+    private readonly ILogger<Agent2> _logger = logger;
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        Console.WriteLine("[Agent‑2] waiting for task...");
+        _logger.LogInformation("[Agent-2] waiting for task...");
 
         // Register capabilities with discovery service
         using var client = new HttpClient();
@@ -22,7 +28,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
         string transportType = _options.UseAzure ? "ServiceBus" : "NamedPipe";
         var endpoint = new AgentEndpoint { TransportType = transportType, Address = _options.QueueOrPipeName };
         await client.PostAsJsonAsync("http://localhost:5000/register", new { capability, endpoint }, cancellationToken);
-        Console.WriteLine("[Agent‑2] Registed capabilities with discovery service");
+        _logger.LogInformation("[Agent-2] Registered capabilities with discovery service");
 
         await _transport.StartProcessingAsync(async json =>
         {
@@ -30,11 +36,11 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
             if (text == null) return;  // not a task message
             if (to != "Agent2")
             {
-                Console.WriteLine($"[Agent‑2] ignored message for {to}");
+                _logger.LogWarning("[Agent-2] ignored message for {To}", to);
                 return;
             }
 
-            Console.WriteLine($"[Agent‑2] received: '{text}' from {from}");
+            _logger.LogInformation("[Agent-2] received: '{Text}' from {From}", text, from);
 
             string result;
 
@@ -52,7 +58,7 @@ public class Agent2(IMessagingTransport transport, Microsoft.SemanticKernel.Kern
                     : $"[unhandled] {text}";
             }
 
-            Console.WriteLine($"[Agent‑2] → responding with '{result}'");
+            _logger.LogInformation("[Agent-2] → responding with '{Result}'", result);
 
             string responseJson = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             await _transport.SendMessageAsync(responseJson);
