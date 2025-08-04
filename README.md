@@ -88,14 +88,14 @@ The transport implementation is abstracted behind `IMessagingTransport`, so you 
 
 ```
 ┌────────────┐          discover           ┌────────────────────────┐
-│  Agent 1   │ ───────────────▶──────────▶│ Discovery Service       │
-└─────┬──────┘                            └──────────┬─────────────┘
+│  Agent 1   │ ───────────────▶──────────▶│ Discovery Service      │
+└─────┬──────┘                             └──────────┬─────────────┘
       │                                           register
       │                                               ▲
       │ send reverse task                             │
       ▼                                               │
 ┌────────────┐        stream result back       ┌───────┴───────┐
-│  Agent 2   │ ◀────────────────────────────── │  Named pipe / │
+│  Agent 2   │ ◀───────────────────────────── │  Named pipe / │
 └────────────┘                                 │  Service Bus  │
                                                └───────────────┘
 ```
