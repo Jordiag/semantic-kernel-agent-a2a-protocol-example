@@ -86,10 +86,7 @@ The transport implementation is abstracted behind `IMessagingTransport`, so you 
 
 ## Architecture overview
 
-```
 <img width="1361" height="904" alt="output-onlinepngtools (5)" src="https://github.com/user-attachments/assets/49155240-efc4-4cd6-af87-d0292b07aa99" />
-
-```
 
 Agent 2 exposes skills via Semantic Kernel functions.  When it receives a task that begins with `reverse:` or `upper:`, it invokes the appropriate function and replies with the result.  The agents can easily be extended with additional skills by updating `TextProcessingFunction.cs` and registering new capabilities.
 
