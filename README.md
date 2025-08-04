@@ -35,6 +35,10 @@ Each project targets **.NET 8** and uses the latest `a2a-dotnet` packages.
 
 ## Running the demo
 
+# Visual Studio, set all prject to run at the same time:
+<img width="802" height="401" alt="image" src="https://github.com/user-attachments/assets/3debf096-d132-4c61-864f-ca16c8b79b32" />
+
+# Command line
 1. **Build the solution**
 
    ```bash
