@@ -1,15 +1,17 @@
+using Microsoft.Extensions.Logging;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.A2A;
 using Semantic.Kernel.Agent2AgentProtocol.Example.Core.Messaging;
 
 namespace Semantic.Kernel.Agent2AgentProtocol.Example.Agent1;
 
-public class Agent1(IMessagingTransport transport)
+public class Agent1(IMessagingTransport transport, ILogger<Agent1> logger)
 {
     private readonly IMessagingTransport _transport = transport;
+    private readonly ILogger<Agent1> _logger = logger;
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        Console.WriteLine("[Agent‑1] starting and listening...");
+        _logger.LogInformation("[Agent-1] starting and listening...");
 
         // Handle task responses
         await _transport.StartProcessingAsync(async json =>
@@ -17,7 +19,7 @@ public class Agent1(IMessagingTransport transport)
             (string? text, _, _) = A2AHelper.ParseTaskRequest(json);
             if (text != null)
             {
-                Console.WriteLine($"[Agent‑1] received response from another agent ← '{text}'");
+                _logger.LogInformation("[Agent-1] received response from another agent ← '{Text}'", text);
             }
 
             await Task.CompletedTask;
@@ -25,7 +27,7 @@ public class Agent1(IMessagingTransport transport)
 
         await Task.Delay(2000, cancellationToken); // ensure Agent‑2 listener is ready
 
-        Console.WriteLine("[Agent‑1] → sending REVERSE task...");
+        _logger.LogInformation("[Agent-1] → sending REVERSE task...");
         string jsonRequest = A2AHelper.BuildTaskRequest("reverse: hello from Agent 1", "Agent1", "Agent2");
         await _transport.SendMessageAsync(jsonRequest);
 
