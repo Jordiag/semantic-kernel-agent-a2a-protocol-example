@@ -35,9 +35,9 @@ public static class A2AHelper
     /// <summary>
     /// Build a <see cref="Message"/> used to send a text task.
     /// </summary>
-    public static Message BuildTaskRequest(string text, string from, string to)
+    public static AgentMessage BuildTaskRequest(string text, string from, string to)
     {
-        return new Message
+        return new AgentMessage
         {
             Role = MessageRole.Agent,
             MessageId = Guid.NewGuid().ToString(),
@@ -54,7 +54,7 @@ public static class A2AHelper
     /// Parse a message looking for a text task request.
     /// Returns (null, null, null) if the payload isn't a valid message.
     /// </summary>
-    public static (string? text, string? from, string? to) ParseTaskRequest(Message message)
+    public static (string? text, string? from, string? to) ParseTaskRequest(AgentMessage message)
     {
         string? text = message.Parts.OfType<TextPart>().FirstOrDefault()?.Text;
         string? from = message.Metadata != null && message.Metadata.TryGetValue("from", out JsonElement fromElem)

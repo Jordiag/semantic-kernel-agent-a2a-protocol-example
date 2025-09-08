@@ -18,7 +18,7 @@ public class Agent1(IMessagingTransport transport, ILogger<Agent1> logger)
         // Handle task responses
         await _transport.StartProcessingAsync(async json =>
         {
-            Message? message = JsonSerializer.Deserialize<Message>(json, A2AJsonUtilities.DefaultOptions);
+            AgentMessage? message = JsonSerializer.Deserialize<AgentMessage>(json, A2AJsonUtilities.DefaultOptions);
             if (message != null)
             {
                 (string? text, _, _) = A2AHelper.ParseTaskRequest(message);
@@ -34,7 +34,7 @@ public class Agent1(IMessagingTransport transport, ILogger<Agent1> logger)
         await Task.Delay(2000, cancellationToken); // ensure Agent‑2 listener is ready
 
         _logger.LogInformation("[Agent-1] → sending REVERSE task...");
-        Message request = A2AHelper.BuildTaskRequest("reverse: hello from Agent 1", "Agent1", "Agent2");
+        AgentMessage request = A2AHelper.BuildTaskRequest("reverse: hello from Agent 1", "Agent1", "Agent2");
         string jsonRequest = JsonSerializer.Serialize(request, A2AJsonUtilities.DefaultOptions);
         await _transport.SendMessageAsync(jsonRequest);
 

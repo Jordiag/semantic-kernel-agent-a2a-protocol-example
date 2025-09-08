@@ -34,7 +34,7 @@ public class Agent2(
 
         await _transport.StartProcessingAsync(async json =>
         {
-            Message? message = JsonSerializer.Deserialize<Message>(json, A2AJsonUtilities.DefaultOptions);
+            AgentMessage? message = JsonSerializer.Deserialize<AgentMessage>(json, A2AJsonUtilities.DefaultOptions);
             if (message == null) return; // not a valid message
 
             (string? text, string? from, string? to) = A2AHelper.ParseTaskRequest(message);
@@ -65,7 +65,7 @@ public class Agent2(
 
             _logger.LogInformation("[Agent-2] → responding with '{Result}'", result);
 
-            Message response = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
+            AgentMessage response = A2AHelper.BuildTaskRequest(result, "Agent2", from ?? string.Empty);
             string responseJson = JsonSerializer.Serialize(response, A2AJsonUtilities.DefaultOptions);
             await _transport.SendMessageAsync(responseJson);
         }, cancellationToken);

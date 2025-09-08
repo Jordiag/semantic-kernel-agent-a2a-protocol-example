@@ -8,10 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.61.0" />
-    <PackageReference Include="A2A" Version="0.1.0-preview.2" />
-    <PackageReference Include="A2A.AspNetCore" Version="0.1.0-preview.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.64.0" />
+    <PackageReference Include="A2A" Version="0.3.1-preview" />
+    <PackageReference Include="A2A.AspNetCore" Version="0.3.1-preview" />
   </ItemGroup>
 
 
